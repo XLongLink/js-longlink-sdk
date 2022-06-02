@@ -1,5 +1,9 @@
-import client from '../src/client';
+import ll from '../src/client';
 
-console.log('active');
+import { LLtestLogin } from './connector';
 
-client.login();
+/*
+    Inizialize test for connection
+*/
+
+LLtestLogin().catch((error) => console.error);

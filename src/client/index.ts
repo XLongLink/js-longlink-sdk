@@ -1,3 +1,4 @@
-import client from './user';
+import Client from './client';
 
-export default client;
+const LL = new Client();
+export default LL;

@@ -7,7 +7,7 @@
     "umd:main": "dist/umd/index.js",
     "types": "dist/types/index.d.js",
     "scripts": {
-        "dev": "npx ts-node test/test.ts",
+        "dev": "cls && npx ts-node test/test.ts",
         "postinstall": "husky install",
         "prepublishOnly": "pinst --disable",
         "postpublish": "pinst --enable",
@@ -55,12 +55,14 @@
         "@json-rpc-tools/utils": "^1.7.6",
         "@walletconnect/client": "^1.7.8",
         "algorand-walletconnect-qrcode-modal": "^1.7.4",
-        "algosdk": "^1.16.0"
+        "algosdk": "^1.16.0",
+        "qrcode-terminal": "^0.12.0"
     },
     "devDependencies": {
         "@commitlint/cli": "^13.1.0",
         "@commitlint/config-conventional": "^13.1.0",
         "@types/jest": "^27.0.1",
+        "@types/qrcode-terminal": "^0.12.0",
         "@typescript-eslint/eslint-plugin": "^4.31.1",
         "@typescript-eslint/parser": "^4.31.1",
         "eslint": "^7.32.0",
