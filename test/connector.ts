@@ -46,6 +46,9 @@ export async function LLtestLogin() {
             return [account.addr];
         });
 
+        /*
+            Automatically sign every requst
+        */
         session.onSigningRequest((txns, message) => {
             let success = true;
             let result: Array<Uint8Array | null> = [];
@@ -108,8 +111,7 @@ export async function LLtestLogin() {
         Report: https://github.com/perawallet/pera-wallet/issues/77
     */
 
-    ll.onConnect(async () => {
+    ll.on('login', async () => {
         await ll.authenticate();
-        console.log(ll.token);
     });
 }

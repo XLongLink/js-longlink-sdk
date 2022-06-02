@@ -1,33 +1,48 @@
-import { login, authenticate } from './auth';
+import { login, authenticate, verifyToken } from './auth';
 import WalletConnect from '@walletconnect/client';
 import QRCodeModal from 'algorand-walletconnect-qrcode-modal';
-import { onConnect, onDisconnect, onUpdate } from './events';
+import EventManager, { connectorEvents } from './events';
 import { BRIDGE } from '../utils/constants';
 
 class Client {
+    id: string | undefined;
+    url: string | undefined;
     connector: WalletConnect;
-    public id: string;
-    public url: string;
-    public isLogged = false;
-    public isAuthenticate = false;
-    public peerId: any;
-    public peerMeta: any;
-    public wallet: any;
-    public token: string | undefined;
-    public uri: string | undefined;
-    public login = login;
-    public authenticate = authenticate;
-    public onConnect = onConnect;
-    public onDisconnect = onDisconnect;
-    public onUpdate = onUpdate;
+    isLogged = false;
+    isAuthenticate = false;
+    wallet: any;
+    token: string | undefined;
+    uri: string | undefined;
+    login = login;
+    authenticate = authenticate;
+    verifyToken = verifyToken;
+    // events
+    private eventMagager = new EventManager();
+    private connectorEvents = connectorEvents;
 
-    constructor(id = '', url = '') {
-        this.id = id;
-        this.url = url;
+    constructor() {
         this.connector = new WalletConnect({
             bridge: BRIDGE,
             qrcodeModal: QRCodeModal
         });
+
+        // subscribe to walletconnect events
+        this.connectorEvents();
+    }
+
+    /*
+        connect eventmager event's to Client function
+    */
+    on(event: string, callback: any) {
+        this.eventMagager.subscribe(event, callback);
+    }
+
+    off(event: string) {
+        this.eventMagager.unsubscribe(event);
+    }
+
+    trigger(name: string, args: Array<string>) {
+        this.eventMagager.trigger(name, args);
     }
 }
 

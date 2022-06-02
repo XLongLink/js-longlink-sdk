@@ -1,11 +1,12 @@
 import Client from './client';
 import algosdk from 'algosdk';
 import { ALGORAND_CHAIN_ID, MAINNET } from '../utils/constants';
-import { isNode, isBrowser } from '@json-rpc-tools/utils';
+import { isNode, isBrowser, formatJsonRpcRequest } from '@json-rpc-tools/utils';
 import QRCodeModal from 'algorand-walletconnect-qrcode-modal';
-import { formatJsonRpcRequest } from '@json-rpc-tools/utils';
+import * as nobleEd25519 from '@noble/ed25519';
 
 /*
+
     Login function
     if there is no connection already active, create a connection
     PARMS: 
@@ -14,6 +15,7 @@ import { formatJsonRpcRequest } from '@json-rpc-tools/utils';
         if true in nodejs print the uri in console
     
     return a promise
+    
 */
 export function login(this: Client, openQRCode = true) {
     return new Promise((resolve) => {
@@ -36,6 +38,7 @@ export function login(this: Client, openQRCode = true) {
 }
 
 /*
+
     Authentication function
     if user is logged (and), create a authetication transaction.
     It's a zero fee transaction that get refused by the network
@@ -46,6 +49,9 @@ export function login(this: Client, openQRCode = true) {
     [to do] expire time
     [to do] chose network
     [to do] error on not logged
+    [to do] modify note into json, add time, project id, ...
+    [to do] if token has expired
+
 */
 const day1 = 86400000;
 export function authenticate(this: Client) {
@@ -90,6 +96,69 @@ export function authenticate(this: Client) {
                 ? Buffer.from(result[0]).toString('base64')
                 : result[0];
             resolve({ token: this.token });
+            this.trigger('authenticate', []);
         }
     });
+}
+
+/*
+    Token Validy function
+    Check it the token is valid for the active account
+
+    Base of the code: https://github.com/AlgoDoggo/statelessAuth/blob/main/middleware/auth.js
+
+    Return: 
+        True if valid
+        False if invalid
+
+    [to do] catch error for invalid token sign
+*/
+export const minutes30 = 1800000;
+export async function verifyToken(this: Client) {
+    if (this.token) {
+        //converting the base64 encoded tx back to binary data
+        const decodeToken = new Uint8Array(Buffer.from(this.token, 'base64'));
+
+        //getting a SignedTransaction object from the array buffer
+        const decodedTx = algosdk.decodeSignedTransaction(decodeToken);
+
+        //auth tx whose params we'll check
+        const toCheck = decodedTx.txn;
+
+        // get the signature from the signed transaction
+        const signature = decodedTx.sig;
+        if (signature) signature.toString();
+        else return false;
+
+        // parse the note back to utf-8
+        const note = new TextDecoder().decode(toCheck.note);
+        const decodedNote = note.split(' ');
+
+        // "from" and "to" are distincts ArrayBuffers,
+        // comparing them directly would always return false.
+        // We therefore convert them back to base32 for comparison.
+        const from = algosdk.encodeAddress(toCheck.from.publicKey);
+        const to = algosdk.encodeAddress(toCheck.to.publicKey);
+
+        // Guard clause to make sure the token has not expired.
+        // We also check the token expiration is not too far out, which would be a red flag.
+        if (
+            Number(decodedNote[1]) < Date.now() ||
+            Number(decodedNote[1]) > Date.now() + day1 + minutes30
+        ) {
+            throw new Error('Token expired, authenticate again');
+        }
+        if (toCheck.firstRound !== 10 || toCheck.lastRound !== 10) return false;
+        if (from !== to && from !== this.wallet) return false;
+        if (decodedNote[0] !== 'https://stateless-auth.vercel.app/')
+            return false;
+        // verify signature and return if it succeeds
+        const verified = await nobleEd25519.verify(
+            signature,
+            toCheck.bytesToSign(),
+            toCheck.from.publicKey
+        );
+        if (verified) return true;
+    }
+    return false;
 }
